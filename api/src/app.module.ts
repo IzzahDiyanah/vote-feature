@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AdminModule } from './admin/admin.module';
 import { AuthGuard, RolesGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
+import { CommentsModule } from './comments/comments.module';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.service';
 import { RequestsModule } from './requests/requests.module';
@@ -21,6 +23,8 @@ import { VotesModule } from './votes/votes.module';
     AuthModule,
     RequestsModule,
     VotesModule,
+    CommentsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [
