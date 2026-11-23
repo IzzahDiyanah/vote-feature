@@ -1,0 +1,102 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum RequestStatus {
+  UNDER_REVIEW
+  PLANNED
+  IN_PROGRESS
+  RELEASED
+  DECLINED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  requests      FeatureRequest[]
+  votes         Vote[]
+  comments      Comment[]
+  statusChanges StatusChange[]
+}
+
+model FeatureRequest {
+  id                  String        @id @default(uuid())
+  title               String
+  description         String
+  status              RequestStatus @default(UNDER_REVIEW)
+  authorId            String
+  author              User          @relation(fields: [authorId], references: [id])
+  // Set when this request was merged into another one (a "duplicate").
+  mergedIntoId        String?
+  mergedInto          FeatureRequest?  @relation("Merge", fields: [mergedIntoId], references: [id])
+  mergedFrom          FeatureRequest[] @relation("Merge")
+  officialResponse    String?
+  officialResponseAt  DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  votes         Vote[]
+  comments      Comment[]
+  statusChanges StatusChange[]
+
+  @@index([status, createdAt])
+  @@index([mergedIntoId])
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  userId    String
+  requestId String
+  createdAt DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id])
+  request FeatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  // Integrity: one vote per user per request, enforced by the database itself.
+  @@unique([userId, requestId])
+  @@index([requestId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  requestId String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  request FeatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User           @relation(fields: [authorId], references: [id])
+
+  @@index([requestId, createdAt])
+}
+
+// Small audit log: who changed a status, and when.
+model StatusChange {
+  id         String        @id @default(uuid())
+  requestId  String
+  adminId    String
+  fromStatus RequestStatus
+  toStatus   RequestStatus
+  createdAt  DateTime      @default(now())
+
+  request FeatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  admin   User           @relation(fields: [adminId], references: [id])
+
+  @@index([requestId, createdAt])
+}
