@@ -15,10 +15,22 @@ add an official response, merge duplicates and see usage stats.
 ## Quick start: everything in Docker
 
 ```bash
-cp .env.example .env            # then set JWT_SECRET to a long random string
-docker compose up --build       # db + api + web
-docker compose exec api npm run db:seed    # demo users and sample requests (once)
+./start.sh
 ```
+
+This creates `.env` with a random `JWT_SECRET`, builds and starts db + api + web, and
+seeds demo data. It is safe to re-run. Stop with `docker compose down`.
+
+<details>
+<summary>Manual steps (what the script does)</summary>
+
+```bash
+cp .env.example .env            # then set JWT_SECRET to a long random string
+docker compose up -d --build --wait       # db + api + web
+docker compose exec api npm run db:seed   # demo users and sample requests (once)
+```
+
+</details>
 
 Open <http://localhost:3000>. API: <http://localhost:3001> (`/health` should say `ok`).
 
