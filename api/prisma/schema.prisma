@@ -42,7 +42,7 @@ model FeatureRequest {
   status              RequestStatus @default(UNDER_REVIEW)
   authorId            String
   author              User          @relation(fields: [authorId], references: [id])
-  // Set when this request was merged into another one (a "duplicate").
+  // set when this request was merged into another (a duplicate)
   mergedIntoId        String?
   mergedInto          FeatureRequest?  @relation("Merge", fields: [mergedIntoId], references: [id])
   mergedFrom          FeatureRequest[] @relation("Merge")
@@ -68,7 +68,7 @@ model Vote {
   user    User           @relation(fields: [userId], references: [id])
   request FeatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
-  // Integrity: one vote per user per request, enforced by the database itself.
+  // one vote per user per request
   @@unique([userId, requestId])
   @@index([requestId])
 }
@@ -86,7 +86,7 @@ model Comment {
   @@index([requestId, createdAt])
 }
 
-// Small audit log: who changed a status, and when.
+// audit log of status changes
 model StatusChange {
   id         String        @id @default(uuid())
   requestId  String

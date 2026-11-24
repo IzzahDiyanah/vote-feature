@@ -5,9 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateRequestDto, ListRequestsQuery, UpdateRequestDto } from './requests.dto';
 
 /**
- * What we read for every request. Vote and comment totals are COUNTed from
- * the rows themselves (never stored), so they cannot drift out of sync.
- * `votes` with a where-clause tells us if the current user has voted.
+ * Fields read for every request. Vote and comment totals are counted from the
+ * rows instead of stored.
  */
 function selectFor(userId: string) {
   return {
@@ -38,12 +37,12 @@ export class RequestsService {
 
   async list(userId: string, query: ListRequestsQuery) {
     const { q, status, sort, page, pageSize } = query;
-    // `contains` turns into ILIKE, where % and _ are wildcards. Escape them so
-    // the user's text is searched literally.
+    // `contains` becomes ILIKE where % and _ are wildcards, escape them
+    // so the search text is matched literally
     const text = q?.replace(/[\\%_]/g, '\\$&');
 
     const where: Prisma.FeatureRequestWhereInput = {
-      mergedIntoId: null, // merged duplicates are hidden from the list
+      mergedIntoId: null, // hide merged duplicates
       ...(status && { status }),
       ...(text && {
         OR: [
@@ -59,7 +58,7 @@ export class RequestsService {
         : sort === 'comments'
           ? [{ comments: { _count: 'desc' } }, { createdAt: 'desc' }]
           : [{ createdAt: 'desc' }];
-    orderBy.push({ id: 'asc' }); // stable order, so pages never overlap
+    orderBy.push({ id: 'asc' }); // stable order so pages do not overlap
 
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.featureRequest.findMany({
@@ -106,7 +105,7 @@ export class RequestsService {
     });
     if (!existing) throw new NotFoundException({ code: 'REQUEST_NOT_FOUND', message: 'Request not found' });
 
-    // Ownership is checked on the server. No one can edit another user's request.
+    // only the author can edit
     if (existing.authorId !== userId) {
       throw new ForbiddenException({
         code: 'NOT_AUTHOR',

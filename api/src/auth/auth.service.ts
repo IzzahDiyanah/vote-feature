@@ -10,7 +10,7 @@ const PUBLIC_USER = { id: true, email: true, name: true, role: true } as const;
 @Injectable()
 export class AuthService {
   private readonly rounds = Number(process.env.BCRYPT_ROUNDS ?? 10);
-  // Used to spend the same time on "unknown email" as on "wrong password".
+  // so an unknown email takes as long as a wrong password
   private readonly dummyHash = bcrypt.hashSync('not-a-real-password', this.rounds);
 
   constructor(
@@ -21,7 +21,7 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const passwordHash = await bcrypt.hash(dto.password, this.rounds);
     try {
-      // Role is never taken from the request: everyone who registers is a USER.
+      // role is never taken from the request, new users are always USER
       return await this.prisma.user.create({
         data: { email: dto.email.toLowerCase(), name: dto.name, passwordHash },
         select: PUBLIC_USER,

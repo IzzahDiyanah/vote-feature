@@ -13,7 +13,7 @@ export class RegisterDto {
   @MaxLength(80)
   name!: string;
 
-  // bcrypt only uses the first 72 bytes, so we cap the length there.
+  // bcrypt only uses the first 72 bytes
   @IsString()
   @MinLength(8)
   @MaxLength(72)

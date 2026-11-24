@@ -16,7 +16,7 @@ export class OfficialResponseDto {
 }
 
 export class MergeDto {
-  /** The request to keep. The request in the URL is the duplicate that gets merged into it. */
+  /** The request to keep. The one in the URL is the duplicate. */
   @IsUUID()
   targetId!: string;
 }

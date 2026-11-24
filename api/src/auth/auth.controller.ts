@@ -6,7 +6,7 @@ import { COOKIE_NAME, cookieOptions, TOKEN_LIFETIME_SECONDS } from './auth.const
 import { LoginDto, RegisterDto } from './auth.dto';
 import { AuthService } from './auth.service';
 
-// Slow down password guessing: 10 attempts per minute per IP on these two routes.
+// 10 attempts per minute per IP on login/register
 const STRICT = { default: { limit: 10, ttl: 60_000 } };
 
 @Controller('auth')

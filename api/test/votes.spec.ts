@@ -85,7 +85,7 @@ describe('Voting integrity', () => {
     const owner = await newUser(app);
     const r = await newRequest(owner.agent);
     const voters = await Promise.all(Array.from({ length: 20 }, () => newUser(app, 'Voter')));
-    // everyone votes, then half of them un-vote, all firing at once, several times each
+    // everyone votes, half un-vote, all at once, a few rounds
     await Promise.all(voters.map((v) => v.agent.put(`/requests/${r.id}/vote`)));
     await Promise.all(
       voters.flatMap((v, i) =>

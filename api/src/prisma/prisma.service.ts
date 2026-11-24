@@ -2,11 +2,7 @@ import { Global, Injectable, Module, OnModuleDestroy, OnModuleInit } from '@nest
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-/**
- * One shared Prisma client for the whole app.
- * We use the `pg` driver adapter (engineType = "client"), so there is no
- * native query-engine binary to ship in Docker.
- */
+/** Shared Prisma client. Uses the pg adapter so no native engine is needed in Docker. */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {

@@ -11,7 +11,7 @@ export class AdminService {
     private readonly requests: RequestsService,
   ) {}
 
-  /** Change status and write an audit row. Both happen in one transaction, or neither does. */
+  /** Change the status and write an audit row in one transaction */
   async setStatus(adminId: string, id: string, status: RequestStatus) {
     await this.prisma.$transaction(async (tx) => {
       const locked = await lockRequest(tx, id, 'UPDATE');
@@ -21,7 +21,7 @@ export class AdminService {
         where: { id },
         select: { status: true },
       });
-      if (current.status === status) return; // nothing changed, so no audit row
+      if (current.status === status) return; // no change, no audit row
 
       await tx.featureRequest.update({ where: { id }, data: { status } });
       await tx.statusChange.create({
@@ -44,19 +44,10 @@ export class AdminService {
   }
 
   /**
-   * Merge a duplicate (source) into the request we keep (target).
-   *
-   * Everything below runs in ONE transaction: if any step fails, the database
-   * is exactly as it was before. No votes or comments are ever lost.
-   *
-   *  1. Lock both rows (always in id order, so two merges can never deadlock).
-   *     Voters and commenters wait on these locks, then see "merged" and get a 409.
-   *  2. Move comments to the target.
-   *  3. Move votes to the target. If someone voted on BOTH requests, keep
-   *     only their one vote on the target (the unique index allows no more).
-   *  4. Anything that was already merged into the source now points at the target.
-   *  5. Mark the source as merged. It stays in the database, so links to it
-   *     still work and the history is kept.
+   * Merge a duplicate (source) into the request we keep (target), in one transaction.
+   * Lock both rows in id order (avoids deadlocks), move comments, move votes
+   * (drop the extra vote if someone voted on both), repoint older merges,
+   * then mark the source as merged. The source row stays so old links still work.
    */
   async merge(adminId: string, sourceId: string, targetId: string) {
     if (sourceId === targetId) {
@@ -85,7 +76,7 @@ export class AdminService {
         UPDATE "Vote" SET "requestId" = ${targetId}
         WHERE "requestId" = ${sourceId}
           AND "userId" NOT IN (SELECT "userId" FROM "Vote" WHERE "requestId" = ${targetId})`;
-      await tx.vote.deleteMany({ where: { requestId: sourceId } }); // leftovers: double voters
+      await tx.vote.deleteMany({ where: { requestId: sourceId } }); // leftovers from people who voted on both
 
       await tx.featureRequest.updateMany({
         where: { mergedIntoId: sourceId },
@@ -116,7 +107,7 @@ export class AdminService {
       }),
     ]);
 
-    // every status is present, even with zero requests
+    // include statuses with zero requests
     const counts = Object.fromEntries(
       Object.values(RequestStatus).map((s) => [s, 0]),
     ) as Record<RequestStatus, number>;

@@ -23,7 +23,7 @@ export async function resetDb(prisma: PrismaService) {
 
 let counter = 0;
 
-/** Register a new user and return a logged-in agent (it keeps the cookie). */
+/** Register a user and return a logged in agent (keeps the cookie) */
 export async function newUser(app: INestApplication, name = 'User') {
   counter++;
   const email = `${name.toLowerCase()}${counter}@test.com`;
@@ -33,7 +33,7 @@ export async function newUser(app: INestApplication, name = 'User') {
   return { agent, user: res.body.user as { id: string; email: string; name: string; role: string } };
 }
 
-/** A user promoted to ADMIN directly in the database (the role is read per request). */
+/** User made ADMIN directly in the db */
 export async function newAdmin(app: INestApplication, prisma: PrismaService) {
   const made = await newUser(app, 'Admin');
   await prisma.user.update({ where: { id: made.user.id }, data: { role: 'ADMIN' } });

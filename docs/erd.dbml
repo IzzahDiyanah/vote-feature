@@ -1,0 +1,86 @@
+Enum Role {
+  USER
+  ADMIN
+}
+
+Enum RequestStatus {
+  UNDER_REVIEW
+  PLANNED
+  IN_PROGRESS
+  RELEASED
+  DECLINED
+}
+
+Table User {
+  id uuid [pk]
+  email varchar [unique, not null]
+  name varchar [not null]
+  passwordHash varchar [not null]
+  role Role [not null, default: 'USER']
+  createdAt timestamp [not null, default: `now()`]
+}
+
+Table FeatureRequest {
+  id uuid [pk]
+  title varchar [not null]
+  description varchar [not null]
+  status RequestStatus [not null, default: 'UNDER_REVIEW']
+  authorId uuid [not null]
+  mergedIntoId uuid [note: 'Set when this request was merged into another one (a duplicate)']
+  officialResponse varchar
+  officialResponseAt timestamp
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (status, createdAt)
+    mergedIntoId
+  }
+}
+
+Table Vote {
+  id uuid [pk]
+  userId uuid [not null]
+  requestId uuid [not null]
+  createdAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (userId, requestId) [unique, note: 'one vote per user per request']
+    requestId
+  }
+}
+
+Table Comment {
+  id uuid [pk]
+  requestId uuid [not null]
+  authorId uuid [not null]
+  body varchar [not null]
+  createdAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (requestId, createdAt)
+  }
+}
+
+Table StatusChange {
+  id uuid [pk]
+  requestId uuid [not null]
+  adminId uuid [not null]
+  fromStatus RequestStatus [not null]
+  toStatus RequestStatus [not null]
+  createdAt timestamp [not null, default: `now()`]
+  Note: 'Small audit log: who changed a status, and when.'
+
+  indexes {
+    (requestId, createdAt)
+  }
+}
+
+Ref: FeatureRequest.authorId > User.id
+Ref: FeatureRequest.mergedIntoId > FeatureRequest.id
+Ref: Vote.userId > User.id
+Ref: Vote.requestId > FeatureRequest.id [delete: cascade]
+Ref: Comment.requestId > FeatureRequest.id [delete: cascade]
+Ref: Comment.authorId > User.id
+Ref: StatusChange.requestId > FeatureRequest.id [delete: cascade]
+Ref: StatusChange.adminId > User.id

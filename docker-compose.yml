@@ -1,4 +1,4 @@
-# Local development stack. Copy .env.example to .env first, then:  docker compose up --build
+# local dev stack: copy .env.example to .env, then docker compose up --build
 services:
   db:
     image: postgres:16-alpine
@@ -7,10 +7,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: featurevote
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # creates the separate "featurevote_test" database used by the tests
+      # creates the featurevote_test db for tests
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d featurevote"]
@@ -25,9 +25,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/featurevote
-      JWT_SECRET: ${JWT_SECRET:?Copy .env.example to .env and set JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
-      COOKIE_SECURE: "false" # set to "true" when served over HTTPS
+      COOKIE_SECURE: "false" # "true" when on https
       PORT: "3001"
     ports:
       - "3001:3001"
@@ -36,6 +36,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  web:
+    build:
+      context: ./web
+      args:
+        # the browser calls the API at this address, so it must be reachable from your machine
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_DEMO_HINT: ${NEXT_PUBLIC_DEMO_HINT:-true}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
 
 volumes:
   pgdata:

@@ -1,5 +1,4 @@
-/** Tests run against a REAL Postgres database (not mocks), because the rules we care
- *  about (unique votes, row locks, transactions) live in the database. */
+/** Tests run against a real Postgres db, not mocks, since the vote/lock rules live in the database. */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',

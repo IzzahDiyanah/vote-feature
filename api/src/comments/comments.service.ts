@@ -32,10 +32,7 @@ export class CommentsService {
     return { items, page, pageSize, total };
   }
 
-  /**
-   * Same pattern as voting: a shared lock on the request row means a comment
-   * can never be added to a request in the middle of being merged.
-   */
+  /** Shared lock on the request row, same as voting, so a comment cannot land mid-merge. */
   create(authorId: string, requestId: string, dto: CreateCommentDto) {
     return this.prisma.$transaction(async (tx) => {
       const request = await lockRequest(tx, requestId, 'SHARE');

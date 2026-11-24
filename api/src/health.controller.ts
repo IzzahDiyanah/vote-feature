@@ -6,7 +6,7 @@ import { PrismaService } from './prisma/prisma.service';
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Used by Docker and load balancers. Fails (500) if the database is unreachable. */
+  /** Health check for docker. 500 if the db is down. */
   @Public()
   @Get()
   async check() {

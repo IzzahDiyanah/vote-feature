@@ -7,17 +7,10 @@ export interface LockedRequest {
 }
 
 /**
- * Lock one FeatureRequest row for the rest of the current transaction.
- *
- *  - 'SHARE'  : used by voting and commenting. Many users can hold it at once,
- *               but it blocks a merge (which needs 'UPDATE') until they finish.
- *  - 'UPDATE' : used by merge and status change. Waits for all SHARE holders,
- *               and makes new voters wait until it is done.
- *
- * This is what stops a vote or comment from landing on a request in the
- * middle of being merged (it would be stranded on the old request).
- * Because the lock is released at COMMIT, a waiting vote then re-reads the row
- * and sees `mergedIntoId`, so it gets a clean 409 instead.
+ * Locks a FeatureRequest row until the transaction ends.
+ *  - 'SHARE': votes and comments. Many can hold it, but it blocks a merge.
+ *  - 'UPDATE': merge and status change. Waits for SHARE holders.
+ * Stops a vote or comment landing on a request that is being merged.
  */
 export async function lockRequest(
   tx: Prisma.TransactionClient,

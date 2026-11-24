@@ -4,7 +4,7 @@ import { AuthUser, CurrentUser, Roles } from '../common/decorators';
 import { MergeDto, OfficialResponseDto, UpdateStatusDto } from './admin.dto';
 import { AdminService } from './admin.service';
 
-/** Every route here is admin-only. The check is `@Roles` + RolesGuard, on the server. */
+/** All admin routes, checked by @Roles + RolesGuard */
 @Roles(Role.ADMIN)
 @Controller('admin')
 export class AdminController {

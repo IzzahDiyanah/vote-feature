@@ -70,7 +70,7 @@ describe('Admin: authorization, status, official response, stats', () => {
       const audit = await prisma.statusChange.findFirstOrThrow({ where: { requestId: r.id } });
       expect(audit.adminId).toBe(admin.user.id);
 
-      // the user sees the new status
+      // user sees the new status
       expect((await user.agent.get(`/requests/${r.id}`)).body.status).toBe('PLANNED');
     });
 

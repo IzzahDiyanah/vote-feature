@@ -14,7 +14,7 @@ import { VotesModule } from './votes/votes.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Basic abuse protection: 120 requests per minute per IP (off in tests).
+    // rate limit: 120 requests/min per IP (off in tests)
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 120 }],
       skipIf: () => process.env.NODE_ENV === 'test',
@@ -28,10 +28,10 @@ import { VotesModule } from './votes/votes.module';
   ],
   controllers: [HealthController],
   providers: [
-    // Guards run in this order for every route:
+    // guards run in this order:
     { provide: APP_GUARD, useClass: ThrottlerGuard }, // 1. rate limit
-    { provide: APP_GUARD, useClass: AuthGuard }, //      2. who are you?
-    { provide: APP_GUARD, useClass: RolesGuard }, //     3. are you allowed?
+    { provide: APP_GUARD, useClass: AuthGuard }, //      2. logged in?
+    { provide: APP_GUARD, useClass: RolesGuard }, //     3. right role?
   ],
 })
 export class AppModule {}

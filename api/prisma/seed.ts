@@ -1,7 +1,4 @@
-/**
- * Demo data. Safe to run more than once.
- * These accounts are for LOCAL DEMO ONLY; the shared password is not a secret.
- */
+/** Demo data, safe to run more than once. Local only, the password is not a secret. */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, RequestStatus } from '@prisma/client';
@@ -27,9 +24,9 @@ const SAMPLE_REQUESTS: { title: string; description: string; status: RequestStat
 async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   const people = [
-    { email: 'admin@example.com', name: 'Admin Ada', role: 'ADMIN' as const },
+    { email: 'admin@example.com', name: 'Admin Diya', role: 'ADMIN' as const },
     { email: 'alice@example.com', name: 'Alice', role: 'USER' as const },
-    { email: 'bob@example.com', name: 'Bob', role: 'USER' as const },
+    { email: 'john@example.com', name: 'John', role: 'USER' as const },
   ];
   const users = [];
   for (const p of people) {
@@ -59,7 +56,7 @@ async function main() {
         data: { requestId: created.id, adminId: admin.id, fromStatus: 'UNDER_REVIEW', toStatus: r.status },
       });
     }
-    // a few votes and a comment, so the list looks alive
+    // some votes and a comment so the list is not empty
     const voters = [alice, bob, admin].slice(0, (i % 3) + 1);
     await prisma.vote.createMany({
       data: voters.map((v) => ({ userId: v.id, requestId: created.id })),
@@ -73,7 +70,7 @@ async function main() {
     i++;
   }
   console.log(`Seeded ${people.length} users and ${SAMPLE_REQUESTS.length} requests.`);
-  console.log(`Log in as admin@example.com / alice@example.com / bob@example.com with password: ${DEMO_PASSWORD}`);
+  console.log(`Log in as admin@example.com / alice@example.com / john@example.com with password: ${DEMO_PASSWORD}`);
 }
 
 main()

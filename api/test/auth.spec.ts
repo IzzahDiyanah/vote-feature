@@ -28,7 +28,7 @@ describe('Auth', () => {
     const res = await request(app.getHttpServer())
       .post('/auth/register')
       .send({ ...body, role: 'ADMIN' });
-    expect(res.status).toBe(400); // unknown field is rejected
+    expect(res.status).toBe(400); // unknown field rejected
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
@@ -66,7 +66,7 @@ describe('Auth', () => {
       .send({ email: 'ghost@test.com', password: 'Password123!' });
     expect(wrongPassword.status).toBe(401);
     expect(unknownEmail.status).toBe(401);
-    expect(wrongPassword.body).toEqual(unknownEmail.body); // does not reveal which emails exist
+    expect(wrongPassword.body).toEqual(unknownEmail.body); // doesn't reveal which emails exist
   });
 
   it('protects routes: 401 without a cookie, user details with one', async () => {

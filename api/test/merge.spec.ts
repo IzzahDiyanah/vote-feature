@@ -15,7 +15,7 @@ describe('Merging duplicate requests', () => {
   const merge = (admin: { agent: Agent }, sourceId: string, targetId: string) =>
     admin.agent.post(`/admin/requests/${sourceId}/merge`).send({ targetId });
 
-  /** Two requests; source voted by A,B; target voted by B,C; a comment on each. */
+  /** Two requests: source voted by A,B, target by B,C, one comment each */
   async function scenario() {
     const admin = await newAdmin(app, prisma);
     const [a, b, c] = [await newUser(app, 'A'), await newUser(app, 'B'), await newUser(app, 'C')];
@@ -36,7 +36,7 @@ describe('Merging duplicate requests', () => {
     const res = await merge(admin, source.id, target.id);
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(target.id);
-    // A, B and C each have exactly one vote. B voted on both, so is counted once.
+    // A, B and C have one vote each, B voted on both so counts once
     expect(res.body.voteCount).toBe(3);
     expect(res.body.commentCount).toBe(2);
 
@@ -45,7 +45,7 @@ describe('Merging duplicate requests', () => {
     expect(await votesOn(source.id)).toBe(0);
     expect(await commentsOn(source.id)).toBe(0);
 
-    // everyone sees that they have voted on the surviving request
+    // everyone shows as voted on the kept request
     for (const u of [a, b, c]) {
       expect((await u.agent.get(`/requests/${target.id}`)).body.hasVoted).toBe(true);
     }
@@ -89,6 +89,32 @@ describe('Merging duplicate requests', () => {
     expect((await merge(admin, third.id, source.id)).body.error.code).toBe('TARGET_MERGED');
   });
 
+  it('MergeDto: rejects a bad request body with 400 before touching the database', async () => {
+    const { admin, source, target } = await scenario();
+    const url = `/admin/requests/${source.id}/merge`;
+
+    const badBodies = [
+      {}, // missing targetId
+      { targetId: 'nope' }, // not a uuid
+      { targetId: 12345 }, // wrong type
+      { targetId: target.id, admin: true }, // extra field not allowed
+    ];
+    for (const body of badBodies) {
+      const res = await admin.agent.post(url).send(body);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details.length).toBeGreaterThan(0);
+    }
+
+    // none of the bad calls changed anything
+    expect(await votesOn(source.id)).toBe(2);
+    expect(await commentsOn(source.id)).toBe(1);
+    expect((await prisma.featureRequest.findUniqueOrThrow({ where: { id: source.id } })).mergedIntoId).toBeNull();
+
+    // valid body works
+    expect((await admin.agent.post(url).send({ targetId: target.id })).status).toBe(200);
+  });
+
   it('a merged request accepts no new votes, comments, edits or status changes', async () => {
     const { admin, a, b, source, target } = await scenario();
     await merge(admin, source.id, target.id);
@@ -109,7 +135,7 @@ describe('Merging duplicate requests', () => {
   it('ROLLBACK: if any step fails, no vote or comment moves and nothing is lost', async () => {
     const { admin, source, target } = await scenario();
 
-    // Make the very last step of the merge fail inside the database.
+    // make the last step of the merge fail in the db
     await prisma.$executeRawUnsafe(`
       CREATE FUNCTION fail_merge() RETURNS trigger AS $$
       BEGIN RAISE EXCEPTION 'simulated failure'; END; $$ LANGUAGE plpgsql`);
@@ -124,7 +150,7 @@ describe('Merging duplicate requests', () => {
       expect(res.status).toBe(500);
       expect(res.body.error.code).toBe('INTERNAL_ERROR');
 
-      // exactly as before: comments and votes are still where they started
+      // nothing moved, comments and votes are where they were
       expect(await votesOn(source.id)).toBe(2);
       expect(await votesOn(target.id)).toBe(2);
       expect(await commentsOn(source.id)).toBe(1);
@@ -136,7 +162,7 @@ describe('Merging duplicate requests', () => {
       await prisma.$executeRawUnsafe('DROP FUNCTION fail_merge()');
     }
 
-    // and once the problem is gone, the same merge works
+    // once the failure is gone the same merge works
     expect((await merge(admin, source.id, target.id)).status).toBe(200);
   });
 
@@ -149,7 +175,7 @@ describe('Merging duplicate requests', () => {
       const source = await newRequest(admin.agent, `Duplicate ${round}`, 'A duplicate being merged.');
       const target = await newRequest(admin.agent, `Original ${round}`, 'The original request.');
 
-      // all votes and the merge fire at the same moment
+      // votes and the merge all fire at once
       const [mergeRes, ...voteRes] = await Promise.all([
         merge(admin, source.id, target.id),
         ...voters.map((v) => v.agent.put(`/requests/${source.id}/vote`)),
@@ -157,17 +183,17 @@ describe('Merging duplicate requests', () => {
       expect(mergeRes.status).toBe(200);
 
       const onTarget = new Set((await prisma.vote.findMany({ where: { requestId: target.id } })).map((v) => v.userId));
-      expect(await votesOn(source.id)).toBe(0); // nothing stranded
+      expect(await votesOn(source.id)).toBe(0); // nothing left behind
 
       voters.forEach((v, i) => {
         const status = voteRes[i].status;
         expect([200, 409]).toContain(status);
-        // accepted votes ended up on the target; rejected ones are nowhere
+        // accepted votes are on the target, rejected ones are nowhere
         expect(onTarget.has(v.user.id)).toBe(status === 200);
         status === 200 ? sawBothOutcomes.accepted++ : sawBothOutcomes.rejected++;
       });
     }
-    // sanity: the test really exercised the race (informational, not an assertion)
+    // just to see the race really happened, not an assertion
     // eslint-disable-next-line no-console
     console.log('race outcomes across rounds:', sawBothOutcomes);
   });

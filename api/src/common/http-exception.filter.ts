@@ -11,9 +11,8 @@ const DEFAULT_CODES: Record<number, string> = {
 };
 
 /**
- * Every error leaves the API in one shape:
- *   { "error": { "code": "SOME_CODE", "message": "Readable text", "details"?: [...] } }
- * Unknown errors become a generic 500 so we never leak internals.
+ * All errors come out as { error: { code, message, details? } }.
+ * Unknown errors become a plain 500 so nothing internal leaks.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -31,7 +30,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (typeof body === 'object' && body !== null) {
         if (Array.isArray(body.message)) {
-          // class-validator errors
+          // validation errors
           code = 'VALIDATION_ERROR';
           message = 'Validation failed';
           details = body.message;
